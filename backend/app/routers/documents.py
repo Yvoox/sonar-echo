@@ -55,7 +55,6 @@ async def upload_document(
 
     # editor/admin → bypass approval; proposer → state proposed
     direct_ingest = membership.role in ("admin", "editor")
-    initial_state = "approved" if direct_ingest else "proposed"
 
     version = 1
     if supersedes is not None:
@@ -82,9 +81,6 @@ async def upload_document(
     session.add(doc)
     await session.flush()
 
-    # initial transition
-    doc.state = "proposed"
-    doc.state = doc.state  # keep type
     # explicit: from None -> proposed
     await document_state.transition(session, doc, "proposed", user.id, "upload")
     if direct_ingest:

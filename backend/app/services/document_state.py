@@ -10,8 +10,7 @@ from app.models import Document, DocumentStateTransition
 
 # allowed transitions: from -> {to}
 ALLOWED: dict[str | None, set[str]] = {
-    None: {"proposed", "approved"},  # creation
-    "proposed": {"approved", "rejected", "deleted"},
+    "proposed": {"proposed", "approved", "rejected", "deleted"},
     "approved": {"ingesting", "rejected", "deleted"},
     "ingesting": {"ingested", "ingestion_failed"},
     "ingested": {"superseded", "deleted"},

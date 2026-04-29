@@ -55,12 +55,17 @@ async def run_ingestion(job_id: uuid.UUID, document_id: uuid.UUID) -> None:
 
 async def _ingest(session: AsyncSession, job: IngestionJob, doc: Document) -> None:
     await gq.ensure_constraints()
+    print("Starting document ingestion")
+
 
     # === Step 0: download + OCR ===
+    print("Step 0: download + OCR ")
     raw = download_bytes(doc.storage_uri)
     ocr = await ocr_document(raw, doc.mime_type)
 
     # === Step 1: chunking ===
+    print("Step 1: chunking")
+
     chunks = chunk_pages(ocr)
     if not chunks:
         raise RuntimeError("no chunks produced from OCR (empty document?)")
@@ -68,6 +73,7 @@ async def _ingest(session: AsyncSession, job: IngestionJob, doc: Document) -> No
     await session.commit()
 
     # === Step 2: extraction (per chunk) ===
+    print("Step 2: extraction (per chunk)")
     all_entities = []
     all_relations = []
     chunk_local_ents: list[list] = []
@@ -107,11 +113,15 @@ async def _ingest(session: AsyncSession, job: IngestionJob, doc: Document) -> No
     await session.commit()
 
     # === Step 3: entity resolution ===
+    print("Step 3: entity resolution")
+
     resolved = await resolve_entities(session, doc.kb_id, all_entities)
     job.saga_step = "resolved"
     await session.commit()
 
     # === Step 4: embeddings (parallel batch) ===
+    print("Step 4: embeddings (parallel batch)")
+
     texts = [c.text for c in chunks]
     embeddings, emb_in = await embed(texts)
     job.token_usage_in += emb_in
@@ -119,6 +129,8 @@ async def _ingest(session: AsyncSession, job: IngestionJob, doc: Document) -> No
     await session.commit()
 
     # === Step 5: build per-chunk entity_ids list ===
+    print("Step 5: build per-chunk entity_ids list")
+
     chunk_entity_ids: dict[str, list[str]] = {}
     mentions_per_chunk: list[tuple[str, list[str]]] = []
     for chunk, locals_ in zip(chunks, chunk_local_ents):
@@ -127,6 +139,8 @@ async def _ingest(session: AsyncSession, job: IngestionJob, doc: Document) -> No
         mentions_per_chunk.append((chunk.chunk_id, canonicals))
 
     # === Step A: Qdrant ===
+    print("Step A: Qdrant")
+
     await writers.write_chunks_to_qdrant(
         kb_id=doc.kb_id,
         doc_id=doc.id,
@@ -140,6 +154,9 @@ async def _ingest(session: AsyncSession, job: IngestionJob, doc: Document) -> No
     await session.commit()
 
     # === Step B: Neo4j ===
+    print("Step B: Neo4j")
+    print(f"DEBUG RELATION {all_relations}")
+
     await writers.write_graph(
         kb_id=doc.kb_id,
         doc_id=doc.id,
@@ -155,6 +172,8 @@ async def _ingest(session: AsyncSession, job: IngestionJob, doc: Document) -> No
     await session.commit()
 
     # === Step C: PG state machine commit-last (visibility gate) ===
+    print("Step C: PG state machine commit-last (visibility gate)")
+
     await document_state.transition(
         session, doc, "ingested", None, "ingestion completed"
     )

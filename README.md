@@ -125,7 +125,7 @@ FRONTEND_ORIGIN=https://sonar.ton-domaine.fr
 docker compose up -d --build
 
 # 3. Premier admin
-docker compose exec backend python -m app.scripts.seed \
+docker-compose exec backend python -m app.scripts.seed \
     --email admin@ton-domaine.fr \
     --password "$(openssl rand -base64 24)" \
     --org "Mon Organisation"

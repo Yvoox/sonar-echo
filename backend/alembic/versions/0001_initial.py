@@ -15,10 +15,35 @@ down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+def type_exists(name):
+    bind = op.get_bind()
+    return bind.execute(
+        sa.text("SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = :name)"),
+        {"name": name}
+    ).scalar()
 
 def upgrade() -> None:
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")
     op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
+
+    kb_role_enum = postgresql.ENUM("admin", "editor", "reader", "proposer",
+                                    name="kb_role_enum", create_type=False)
+
+    #if not type_exists('kb_role_enum'):
+    #    kb_role_enum.create(op.get_bind(), checkfirst=True)
+
+    doc_state_enum = postgresql.ENUM(
+        "proposed", "approved", "rejected", "ingesting", "ingested",
+        "ingestion_failed", "superseded", "deleted",
+        name="doc_state_enum", create_type=False,
+    )
+    #if not type_exists('doc_state_enum'):
+    #    doc_state_enum.create(op.get_bind(), checkfirst=True)
+
+    gem_visibility = postgresql.ENUM("private", "kb", "org", name="gem_visibility_enum", create_type=False)
+
+    #if not type_exists('gem_visibility_enum'):
+    #    gem_visibility.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
         "organizations",
@@ -51,9 +76,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
 
-    kb_role_enum = postgresql.ENUM("admin", "editor", "reader", "proposer",
-                                    name="kb_role_enum", create_type=True)
-    kb_role_enum.create(op.get_bind(), checkfirst=True)
     op.create_table(
         "kb_memberships",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -69,12 +91,7 @@ def upgrade() -> None:
     op.create_index("ix_kb_memberships_user_id", "kb_memberships", ["user_id"])
     op.create_index("ix_kb_memberships_kb_id", "kb_memberships", ["kb_id"])
 
-    doc_state_enum = postgresql.ENUM(
-        "proposed", "approved", "rejected", "ingesting", "ingested",
-        "ingestion_failed", "superseded", "deleted",
-        name="doc_state_enum", create_type=True,
-    )
-    doc_state_enum.create(op.get_bind(), checkfirst=True)
+
     op.create_table(
         "documents",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -152,8 +169,7 @@ def upgrade() -> None:
     op.create_index("ix_erc_kb_id", "entity_resolution_candidates", ["kb_id"])
     op.create_index("ix_erc_entity_id", "entity_resolution_candidates", ["entity_id"])
 
-    gem_visibility = postgresql.ENUM("private", "kb", "org", name="gem_visibility_enum", create_type=True)
-    gem_visibility.create(op.get_bind(), checkfirst=True)
+
     op.create_table(
         "gems",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),

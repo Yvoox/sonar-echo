@@ -43,17 +43,23 @@ async def run_leiden_and_summarise(kb_id: uuid.UUID) -> None:
             pass
 
         # Project the entity-RELATED_TO subgraph (filtered by kb_id at projection)
+        node_query = "MATCH (e:Entity {kb_id: $kb_id}) RETURN id(e) AS id"
+        rel_query = (
+            "MATCH (a:Entity {kb_id: $kb_id})-[r:RELATED_TO]-(b:Entity {kb_id: $kb_id}) "
+            "RETURN id(a) AS source, id(b) AS target, coalesce(r.confidence, 0.7) AS weight"
+        )
         await ne.run(
             """
             CALL gds.graph.project.cypher(
               $graph_name,
-              'MATCH (e:Entity {kb_id: $kb_id}) RETURN id(e) AS id',
-              'MATCH (a:Entity {kb_id: $kb_id})-[r:RELATED_TO]-(b:Entity {kb_id: $kb_id}) '
-              'RETURN id(a) AS source, id(b) AS target, coalesce(r.confidence, 0.7) AS weight',
+              $node_query,
+              $rel_query,
               {parameters: {kb_id: $kb_id}}
             )
             """,
             graph_name=graph_name,
+            node_query=node_query,
+            rel_query=rel_query,
             kb_id=str(kb_id),
         )
 

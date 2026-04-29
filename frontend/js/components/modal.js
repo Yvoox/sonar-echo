@@ -2,7 +2,7 @@
 //   openModal({ title, body: HTMLElement, footer: HTMLElement|null, onClose? })
 // `body` can also be a function (root) => void to inject contents lazily.
 
-import { h, clear } from '../utils.js';
+import { h } from '../utils.js';
 import { icons } from './icons.js';
 
 let activeBackdrop = null;
@@ -42,7 +42,6 @@ export function openModal({ title = '', body, footer = null, onClose, width } = 
     onClick: (e) => { if (e.target === backdrop) close(); },
   }, modal);
 
-  document.body.appendChild(headerEl);   // ensure stylable
   root.appendChild(backdrop);
   activeBackdrop = backdrop;
   document.addEventListener('keydown', onKey);

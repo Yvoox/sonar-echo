@@ -23,7 +23,7 @@ async def enqueue_ingestion(job_id: uuid.UUID, document_id: uuid.UUID) -> None:
         "ingest_document",
         str(job_id),
         str(document_id),
-        _job_id=f"ingest:{job_id}",
+        #_job_id=f"ingest:{job_id}",
     )
 
 
@@ -33,13 +33,13 @@ async def enqueue_doc_cleanup(document_id: uuid.UUID, hard: bool = False) -> Non
         "cleanup_document",
         str(document_id),
         hard,
-        _job_id=f"cleanup:{document_id}",
+        #_job_id=f"cleanup:{document_id}",
     )
 
 
 async def enqueue_user_erasure(user_id: uuid.UUID) -> None:
     pool = await _get_pool()
-    await pool.enqueue_job("erase_user", str(user_id), _job_id=f"erase:{user_id}")
+    await pool.enqueue_job("erase_user", str(user_id), ) #_job_id=f"erase:{user_id}"
 
 
 async def enqueue_automation_run(automation_id: uuid.UUID) -> None:
@@ -49,7 +49,7 @@ async def enqueue_automation_run(automation_id: uuid.UUID) -> None:
 
 async def enqueue_leiden(kb_id: uuid.UUID) -> None:
     pool = await _get_pool()
-    await pool.enqueue_job("rebuild_communities", str(kb_id), _job_id=f"leiden:{kb_id}")
+    await pool.enqueue_job("rebuild_communities", str(kb_id), ) #_job_id=f"leiden:{kb_id}"
 
 
 async def enqueue_kwargs(name: str, *args: Any, **kwargs: Any) -> None:
